@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Навыки программы — Промбезопасность</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html, body {
+            background: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #333;
+            line-height: 1.4;
+        }
+
+        /* ---------- ГЛАВНАЯ (700×700, без прокрутки) ---------- */
+        .interactive {
+            width: 700px;
+            height: 700px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            background: transparent;
+        }
+
+        .interactive-inner {
+            width: 100%;
+            height: 100%;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 12px;
+            font-size: 1.35rem;
+            color: #2980b9;
+            flex: 0 0 auto;
+        }
+
+        /* Сетка 2 колонки × 5 рядов */
+        .modules-grid {
+            flex: 1 1 auto;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: repeat(5, 1fr);
+            gap: 10px;
+            min-height: 0;
+        }
+
+        .module-card {
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            min-height: 0;
+        }
+
+        .module-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 14px rgba(0,0,0,0.15);
+        }
+
+        .module-card .thumb {
+            flex: 0 0 auto;
+            height: 100%;
+            aspect-ratio: 1 / 1;
+            overflow: hidden;
+            background: #dfe6e9;
+        }
+
+        .module-card .thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .module-card h3 {
+            flex: 1 1 auto;
+            display: flex;
+            align-items: center;
+            padding: 0 12px;
+            font-size: 0.9rem;
+            line-height: 1.25;
+            color: #2c3e50;
+            font-weight: 600;
+            text-align: left;
+            overflow: hidden;
+        }
+
+        /* ---------- ДЕТАЛЬНАЯ СТРАНИЦА (600, высота по контенту) ---------- */
+        .module-page-wrap {
+            display: none;
+            width: 600px;
+            margin: 20px auto;
+        }
+
+        .module-page-wrap.active { display: block; }
+
+        .detail-split {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 18px;
+            background: #fff;
+            border-radius: 12px;
+            padding: 18px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            align-items: start;
+        }
+
+        .detail-split .left {
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            background: #f0f3f5;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .detail-split .left img {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 8px;
+        }
+
+        .detail-split .right {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .detail-split .right h2 {
+            font-size: 1.05rem;
+            margin-bottom: 10px;
+            color: #2c3e50;
+            line-height: 1.3;
+        }
+
+        .detail-split .right .subtitle {
+            margin-bottom: 10px;
+            color: #555;
+            font-size: 0.85rem;
+        }
+
+        .skills-list { list-style: none; padding: 0; }
+
+        .skills-list li {
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+            padding-left: 22px;
+            position: relative;
+            line-height: 1.35;
+        }
+
+        .skills-list li::before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #27ae60;
+            font-weight: bold;
+            font-size: 0.95rem;
+        }
+
+        .back-btn {
+            display: inline-block;
+            background-color: #3498db;
+            color: white;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-bottom: 14px;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .back-btn:hover { background-color: #2980b9; }
+
+        .interactive.hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<!-- ГЛАВНАЯ: 700×700 -->
+<div class="interactive" id="interactive">
+    <div class="interactive-inner">
+        <div id="main-page" style="display:flex; flex-direction:column; height:100%;">
+            <h1>Какие навыки прокачаете при обучении</h1>
+            <div class="modules-grid" id="modulesGrid"></div>
+        </div>
+    </div>
+</div>
+
+<!-- ДЕТАЛЬНЫЕ СТРАНИЦЫ -->
+<div id="detail-pages"></div>
+
+<script>
+    const modulesData = [
+        { id:'module1', title:'Российское законодательство в области промбезопасности', image:'1тема.jpg',
+          skills:['Ориентирование в законодательстве по промбезопасности','Идентификация ОПО'] },
+        { id:'module2', title:'Обязанности организаций и работников в области промбезопасности', image:'2тема.jpg',
+          skills:['Организация эксплуатации ОПО','Работа с персоналом ОПО','Работа с подрядными организациями'] },
+        { id:'module3', title:'Регистрационные и разрешительные процедуры при эксплуатации ОПО', image:'3тема.jpg',
+          skills:['Регистрация ОПО','Получение лицензии на эксплуатацию ОПО'] },
+        { id:'module4', title:'Подготовка работников ОПО', image:'4тема.jpg',
+          skills:['Обучение и допуск к самостоятельной работе персонала ОПО','Организация аттестации и повышения квалификации руководителей и специалистов ОПО','Контроль обучения, аттестации и проверки знаний работников ОПО'] },
+        { id:'module5', title:'Проектирование ОПО', image:'5тема.jpg',
+          skills:['Разработка техзадания на проектирование ОПО','Организация реконструкции и техперевооружения ОПО','Организация консервации и ликвидации ОПО','Анализ проектной документации ОПО'] },
+        { id:'module6', title:'Эксплуатация ОПО', image:'6тема.jpg',
+          skills:['Входной контроль оборудования и материалов','Контроль исполнительной документации и ввод в эксплуатацию','Курирование монтажа, наладки и проведения работ повышенной опасности','Контроль и продление срока эксплуатации ТУ, ЗиС','Организация ремонта, обслуживания и эксплуатационного контроля оборудования','Организация экспертизы промбезопасности ОПО','Организация физической защиты ОПО'] },
+        { id:'module7', title:'Контроль соблюдения требований промбезопасности', image:'7тема.jpg',
+          skills:['Распределение обязанностей по производственному контролю ОПО','Документационное обеспечение производственного контроля ОПО','Подготовка к проверке Ростехнадзора','Взаимодействие с инспектором во время проверки ОПО','Отработка предписаний и предостережений','Составление ежегодного отчета о производственном контроле','Годовое планирование мероприятий','Проведение внутренних проверок ОПО'] },
+        { id:'module8', title:'Обеспечение готовности организаций к авариям на ОПО', image:'8тема.jpg',
+          skills:['Обеспечение и контроль готовности ОПО к авариям','Анализ эффективности противоаварийных мер на ОПО','Страхование ОПО','Разработка ПМЛА','Организация противоаварийной подготовки персонала'] },
+        { id:'module9', title:'Расследование происшествий на ОПО', image:'9тема.jpg',
+          skills:['Расследование инцидентов на ОПО','Расследование аварий на ОПО','Расследование случаев утраты взрывчатых веществ на ОПО','Подготовка оперативного сообщения'] },
+        { id:'module10', title:'Ответственность владельца ОПО за нарушение требований промбезопасности', image:'10тема.jpg',
+          skills:['Защита интересов организации во время надзорных проверок ОПО','Аргументация отступлений от требований ФНП при проверках ОПО','Обжалование результатов проверок'] }
+    ];
+
+    const interactive = document.getElementById('interactive');
+    const detailPagesContainer = document.getElementById('detail-pages');
+    const modulesGrid = document.getElementById('modulesGrid');
+
+    function renderMainPage() {
+        modulesGrid.innerHTML = '';
+        modulesData.forEach((module) => {
+            const card = document.createElement('div');
+            card.className = 'module-card';
+            card.innerHTML = `
+                <div class="thumb">
+                    <img src="${module.image}" alt="${module.title}" onerror="this.style.opacity=0.3;">
+                </div>
+                <h3>${module.title}</h3>
+            `;
+            card.addEventListener('click', () => openDetail(module.id));
+            modulesGrid.appendChild(card);
+        });
+    }
+
+    function renderDetailPages() {
+        detailPagesContainer.innerHTML = '';
+        modulesData.forEach((module, index) => {
+            const wrap = document.createElement('div');
+            wrap.className = 'module-page-wrap';
+            wrap.id = `detail-${module.id}`;
+
+            const skillsHtml = module.skills.map(s => `<li>${s}</li>`).join('');
+
+            wrap.innerHTML = `
+                <button class="back-btn" onclick="closeDetail()">← Назад</button>
+                <div class="detail-split">
+                    <div class="left">
+                        <img src="${module.image}" alt="${module.title}" onerror="this.style.opacity=0.3;">
+                    </div>
+                    <div class="right">
+                        <h2>${index + 1}. ${module.title}</h2>
+                        <p class="subtitle">Освоите навыки:</p>
+                        <ul class="skills-list">${skillsHtml}</ul>
+                    </div>
+                </div>
+            `;
+            detailPagesContainer.appendChild(wrap);
+        });
+    }
+
+    function openDetail(id) {
+        interactive.classList.add('hidden');
+        document.querySelectorAll('.module-page-wrap').forEach(p => p.classList.remove('active'));
+        const target = document.getElementById(`detail-${id}`);
+        if (target) target.classList.add('active');
+        window.scrollTo(0, 0);
+    }
+
+    window.closeDetail = function () {
+        document.querySelectorAll('.module-page-wrap').forEach(p => p.classList.remove('active'));
+        interactive.classList.remove('hidden');
+        window.scrollTo(0, 0);
+    };
+
+    window.onload = function () {
+        renderMainPage();
+        renderDetailPages();
+    };
+</script>
+
+</body>
+</html>
