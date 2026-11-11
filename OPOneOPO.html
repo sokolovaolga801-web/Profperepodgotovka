@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Первичная идентификация объекта: ОПО/не ОПО</title>
+<style>
+  :root{
+    --blue:#062a5e; --blue-mid:#0b4499; --blue-soft:#1d4b8a;
+    --line:#dbe7fb; --violet:#6d28d9;
+    --card-w:310px; --card-h:64px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{height:100%; overflow:hidden;}
+  body{
+    margin:0; display:flex; align-items:center; justify-content:center;
+    background:#fff; min-height:100vh; padding:0;
+    font-family:'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+    color:var(--blue);
+  }
+  .app{
+    width:700px; height:750px; background:#fff;
+    border:none; box-shadow:none; border-radius:0;
+    padding:12px; display:flex; flex-direction:column; gap:8px;
+    position:relative; overflow:hidden;
+  }
+
+  /* ===== HEADER ===== */
+  .head{flex:0 0 auto;}
+  .title{font-size:17px; font-weight:800; display:flex; align-items:center; gap:8px; letter-spacing:.2px; color:var(--blue); line-height:1.2;}
+  .title .bar{width:46px; height:6px; border-radius:99px; background:linear-gradient(90deg,#0b4499,#6d28d9,#16a34a); flex:0 0 auto;}
+  .sub{font-size:11px; line-height:1.3; color:var(--blue-soft); margin-top:3px;}
+
+  /* ===== STACK ===== */
+  .stack-wrap{
+    flex:0 0 104px; position:relative;
+    background:#fff; border:2px dashed #cddffb; border-radius:14px;
+    overflow:hidden;
+  }
+  .stack-pill{
+    position:absolute; top:5px; left:7px; z-index:400;
+    font-size:9.5px; font-weight:800; color:#fff;
+    background:linear-gradient(90deg,#0b4499,#6d28d9);
+    padding:2px 9px; border-radius:999px;
+    display:flex; align-items:center; gap:5px;
+  }
+  .stack-pill .cnt{
+    background:rgba(255,255,255,.3); border-radius:999px;
+    padding:0 6px; font-size:9px;
+  }
+  .stack{
+    position:absolute; inset:0; display:flex;
+    align-items:center; justify-content:center;
+  }
+
+  /* ===== FLIP CARD BASE ===== */
+  .card{perspective:900px;}
+  .flip-inner{
+    position:relative; width:100%; height:100%;
+    transition:transform .65s cubic-bezier(.35,.1,.25,1);
+    transform-style:preserve-3d;
+  }
+  .card.flipped .flip-inner{transform:rotateY(180deg);}
+  .flip-face{
+    position:absolute; inset:0;
+    backface-visibility:hidden; -webkit-backface-visibility:hidden;
+    border-radius:10px; overflow:hidden;
+  }
+  .flip-back{transform:rotateY(180deg);}
+
+  .flip-front{
+    background:#fff;
+    border:2px solid var(--line);
+    border-left:4px solid #7fb2f0;
+    display:flex; align-items:center; gap:8px;
+    padding:5px 9px;
+    font-size:10.5px; line-height:1.25; color:var(--blue);
+    box-shadow:0 3px 8px rgba(6,42,94,.1);
+  }
+  .flip-front .emoji{
+    width:40px; height:40px; flex:0 0 auto; border-radius:50%;
+    background:linear-gradient(135deg,#e8f1ff,#c9ddff);
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; line-height:1;
+    box-shadow:inset 0 -2px 6px rgba(6,42,94,.15);
+  }
+  .flip-front .text{flex:1;}
+
+  .flip-back{
+    background:linear-gradient(135deg,#f5f9ff,#e6f0ff);
+    border:2px solid #b8d4f5;
+    padding:4px 9px;
+    font-size:9px; line-height:1.38; color:var(--blue);
+    overflow-y:auto;
+  }
+
+  /* ===== ОДИНАКОВЫЙ РАЗМЕР ===== */
+  .stack .card{
+    position:absolute;
+    width:var(--card-w); height:var(--card-h);
+    left:50%; top:50%;
+    margin-left:calc(var(--card-w) / -2);
+    margin-top:calc(var(--card-h) / -2);
+    cursor:pointer;
+  }
+  .stack .card:not(.is-top){pointer-events:none;}
+  .stack .card:active{cursor:grabbing;}
+
+  .zone-body .card{
+    position:relative;
+    width:var(--card-w);
+    height:var(--card-h);
+    flex:0 0 auto;
+    cursor:pointer;
+  }
+
+  /* ===== СОСТОЯНИЯ ===== */
+  .card.correct .flip-front{
+    border-color:#22c55e !important;
+    border-left-color:#16a34a !important;
+    background:#f6fffa !important;
+    box-shadow:0 0 0 3px rgba(34,197,94,.15) !important;
+  }
+  .card.wrong .flip-front{
+    border-color:#ef4444 !important;
+    border-left-color:#dc2626 !important;
+    background:#fff6f6 !important;
+    box-shadow:0 0 0 3px rgba(239,68,68,.13) !important;
+  }
+  .card.correct .flip-back{
+    border-color:#22c55e !important;
+    background:linear-gradient(135deg,#f6fffa,#e0ffe9) !important;
+  }
+  .card.wrong .flip-back{
+    border-color:#ef4444 !important;
+    background:linear-gradient(135deg,#fff6f6,#ffe0e0) !important;
+  }
+  .card .mark{
+    position:absolute; top:4px; right:4px;
+    width:18px; height:18px; border-radius:50%;
+    font-size:11px; font-weight:900; color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 6px rgba(0,0,0,.22);
+    z-index:100;
+  }
+  .card.correct .mark{background:#22c55e;}
+  .card.wrong .mark{background:#ef4444;}
+  .card.selected .flip-front{
+    outline:3px solid var(--violet); outline-offset:2px;
+  }
+  .card.flip-able .flip-front::after{
+    content:'↻';
+    position:absolute; bottom:2px; right:5px;
+    font-size:11px; font-weight:800; color:var(--violet); opacity:.75;
+  }
+  .card.flip-able.flipped .flip-front::after{display:none;}
+
+  /* ===== ZONES ===== */
+  .zones{flex:1; min-height:0; display:grid; grid-template-columns:1fr 1fr; gap:8px;}
+  .zone{
+    display:flex; flex-direction:column;
+    background:#fff; border:3px dashed #cfe0f8; border-radius:14px;
+    overflow:hidden; min-height:0;
+    transition:background .15s, border-color .15s;
+  }
+  .zone.opo{border-color:#34d399;}
+  .zone.safe{border-color:#fbbf24;}
+  .zone.over{background:#f5fdf8;}
+  .zone.safe.over{background:#fffcf2;}
+
+  .zone-head{
+    flex:0 0 auto; padding:5px 10px;
+    display:flex; align-items:center; justify-content:space-between; gap:6px;
+    font-size:12px; font-weight:800; color:var(--blue);
+    border-bottom:2px solid #eef3fb;
+    background:#fff;
+  }
+  .zone-head .tag{
+    font-size:9px; font-weight:800; color:#fff;
+    padding:2px 7px; border-radius:999px; white-space:nowrap;
+  }
+  .zone.opo .tag{background:linear-gradient(90deg,#15803d,#22c55e);}
+  .zone.safe .tag{background:linear-gradient(90deg,#b45309,#f59e0b);}
+
+  .zone-body{
+    flex:1; min-height:0;
+    overflow-y:auto; overflow-x:hidden;
+    padding:6px; display:flex; flex-direction:column; gap:6px;
+    align-items:center;
+  }
+  .hint-empty{
+    margin:auto; text-align:center; font-size:10.5px; color:#8fa9cd;
+    font-style:italic; padding:10px; line-height:1.3;
+  }
+
+  /* ===== FOOTER ===== */
+  .foot{flex:0 0 auto; display:flex; align-items:center; gap:8px;}
+  button{
+    font-family:inherit; cursor:pointer;
+    transition:transform .12s, filter .15s;
+    box-shadow:none;
+  }
+  button:active{transform:scale(.97);}
+  .btn-main{
+    border:none; background:linear-gradient(90deg,#0b4499,#6d28d9);
+    color:#fff; font-weight:800; font-size:13px;
+    padding:10px 24px; border-radius:11px;
+    box-shadow:none;
+  }
+  .btn-main:hover{filter:brightness(1.08);}
+  .btn-ghost{
+    background:#fff; color:var(--blue-mid); border:2px solid #cddffb;
+    font-weight:700; font-size:12px; padding:8px 14px; border-radius:11px;
+    box-shadow:none;
+  }
+  .btn-ghost:hover{background:#f2f7ff; border-color:#9dc4f7;}
+  .status{margin-left:auto; font-size:11px; font-weight:700; color:var(--blue-soft); text-align:right; line-height:1.25;}
+
+  /* ===== SCROLLBARS (только в зонах) ===== */
+  .zone-body::-webkit-scrollbar{width:6px;}
+  .zone-body::-webkit-scrollbar-track{background:transparent;}
+  .zone-body::-webkit-scrollbar-thumb{
+    background:#cddffb; border-radius:99px;
+  }
+  .zone-body::-webkit-scrollbar-thumb:hover{background:#9dc4f7;}
+  .zone-body{ scrollbar-width:thin; scrollbar-color:#cddffb transparent; }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="head">
+    <div class="title"><span class="bar"></span>Первичная идентификация объекта: ОПО/не ОПО</div>
+    <div class="sub">
+      Перетащите верхнюю карточку в нужную зону (на телефоне — коснитесь карточки, затем зоны).
+      После проверки нажмите на карточку, чтобы перевернуть её и прочитать аргумент.
+    </div>
+  </div>
+
+  <div class="stack-wrap">
+    <div class="stack-pill">📦 Осталось <span class="cnt" id="poolCount">12</span></div>
+    <div class="stack" id="stack"></div>
+  </div>
+
+  <div class="zones">
+    <div class="zone opo" data-zone="opo">
+      <div class="zone-head">
+        <span>🟢 ОПО</span>
+        <span class="tag">опасный объект</span>
+      </div>
+      <div class="zone-body" id="bodyOpo"></div>
+    </div>
+    <div class="zone safe" data-zone="safe">
+      <div class="zone-head">
+        <span>🔴 Не ОПО</span>
+        <span class="tag">не относится</span>
+      </div>
+      <div class="zone-body" id="bodySafe"></div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <button class="btn-main" id="checkBtn">Проверить</button>
+    <button class="btn-ghost" id="resetBtn">Сбросить</button>
+    <div class="status" id="status">Размещено: 0 из 12</div>
+  </div>
+</div>
+
+<script>
+/* ====================== ДАННЫЕ ====================== */
+const DATA = [
+  { id:1, zone:"opo", emoji:"🏗",
+    text:"Кран-балка 15 т, установлена стационарно",
+    why:"п. 3 Приложения 1: используются стационарно установленные грузоподъёмные механизмы. Кран-балка — именно такой механизм." },
+
+  { id:2, zone:"opo", emoji:"⛽",
+    text:"Товарно-сырьевой склад: 250 т бензина",
+    why:"п. 1 Приложения 1 + Приложение 2: хранение горючих жидкостей на товарно-сырьевых складах. Порог начинается с 1 т, 250 т — II класс опасности." },
+
+  { id:3, zone:"opo", emoji:"💨",
+    text:"Пар под избыточным давлением 0,1 МПа",
+    why:"п. 2 Приложения 1: оборудование под избыточным давлением более 0,07 МПа. 0,1 МПа > 0,07 МПа — признак выполняется." },
+
+  { id:4, zone:"opo", emoji:"🔥",
+    text:"Печь для расплава цветных металлов, 800 кг",
+    why:"п. 4 Приложения 1: получение расплавов цветных металлов с оборудованием на 500 кг и более. 800 кг ≥ 500 кг." },
+
+  { id:5, zone:"opo", emoji:"⛏",
+    text:"Открытые горные работы с взрывными работами",
+    why:"п. 5 Приложения 1: ведутся горные работы. Исключение — добыча без взрывных работ; здесь взрывные работы применяются." },
+
+  { id:6, zone:"opo", emoji:"🌾",
+    text:"Элеватор: зерно, склонное к самосогреванию",
+    why:"п. 6 Приложения 1: хранение растительного сырья, склонного к самосогреванию и самовозгоранию." },
+
+  { id:7, zone:"safe", emoji:"🛢",
+    text:"Сосуд под давлением ровно 0,07 МПа (пар)",
+    why:"В п. 2 Приложения 1 указано «более 0,07 МПа». Значение ровно 0,07 МПа порог не превышает — признак не выполняется. Ловушка на внимательность." },
+
+  { id:8, zone:"safe", emoji:"🧪",
+    text:"Склад 0,5 т бензина (не товарно-сырьевой)",
+    why:"Порог для горючих жидкостей начинается с 1 т, а объект прямо указан как не товарно-сырьевой склад. Признак ОПО не возникает." },
+
+  { id:9, zone:"safe", emoji:"🏭",
+    text:"Печь для алюминия, расплав 300 кг",
+    why:"Порог п. 4 Приложения 1 — 500 кг и более на единицу оборудования. 300 кг < 500 кг. Ёмкости разных печей не суммируются." },
+
+  { id:10, zone:"safe", emoji:"♨️",
+    text:"Сосуд 0,05 МПа, горячая вода 100 °C",
+    why:"Для воды признак ОПО — нагрев более 115 °C (либо давление более 0,07 МПа). Оба параметра ниже пороговых значений." },
+
+  { id:11, zone:"safe", emoji:"🏢",
+    text:"Офис проектной организации",
+    why:"Ни один из шести признаков Приложения 1 не выполняется: нет опасных веществ в пороговых количествах, оборудования под давлением, стационарных грузоподъёмных механизмов и т.д." },
+
+  { id:12, zone:"safe", emoji:"⚡",
+    text:"Трансформаторная подстанция 10 кВ",
+    why:"Приложение 1 прямо исключает объекты электросетевого хозяйства из числа ОПО." }
+];
+
+/* ====================== DOM ====================== */
+const stack     = document.getElementById('stack');
+const poolCount = document.getElementById('poolCount');
+const bodyOpo   = document.getElementById('bodyOpo');
+const bodySafe  = document.getElementById('bodySafe');
+const statusEl  = document.getElementById('status');
+const checkBtn  = document.getElementById('checkBtn');
+const resetBtn  = document.getElementById('resetBtn');
+const zoneOpoEl = document.querySelector('.zone[data-zone="opo"]');
+const zoneSafeEl= document.querySelector('.zone[data-zone="safe"]');
+
+let checked = false;
+
+/* ====================== ХЕЛПЕРЫ ====================== */
+function shuffle(a){
+  const r = a.slice();
+  for(let i=r.length-1;i>0;i--){
+    const j = Math.floor(Math.random()*(i+1));
+    [r[i],r[j]] = [r[j],r[i]];
+  }
+  return r;
+}
+
+/* ====================== СОЗДАНИЕ КАРТОЧКИ ====================== */
+function makeCard(item){
+  const el = document.createElement('div');
+  el.className = 'card';
+  el.dataset.id = item.id;
+  el.innerHTML =
+    '<div class="flip-inner">' +
+      '<div class="flip-face flip-front">' +
+        '<span class="emoji">' + item.emoji + '</span>' +
+        '<span class="text"></span>' +
+      '</div>' +
+      '<div class="flip-face flip-back"></div>' +
+    '</div>';
+  el.querySelector('.text').textContent = item.text;
+
+  el.draggable = true;
+
+  el.addEventListener('dragstart', e => {
+    if(checked){ e.preventDefault(); return; }
+    e.dataTransfer.setData('text/plain', String(item.id));
+    e.dataTransfer.effectAllowed = 'move';
+  });
+
+  el.addEventListener('click', e => {
+    e.stopPropagation();
+    if(checked){
+      el.classList.toggle('flipped');
+    } else {
+      const wasSel = el.classList.contains('selected');
+      document.querySelectorAll('.card.selected')
+        .forEach(c => c.classList.remove('selected'));
+      if(!wasSel) el.classList.add('selected');
+    }
+  });
+
+  return el;
+}
+
+/* ====================== СТОПКА ====================== */
+function renderStack(){
+  const cards = [...stack.querySelectorAll('.card')];
+  cards.forEach((card, i) => {
+    const isTop = i === 0;
+    card.style.zIndex = cards.length - i;
+    const rot = isTop ? 0 : (i % 2 ? 1 : -1) * Math.min(i * 0.6, 2);
+    const ty  = isTop ? 0 : -Math.min(i * 2, 8);
+    const sc  = 1 - Math.min(i * 0.012, 0.05);
+    card.style.transform =
+      'translateY(' + ty + 'px) rotate(' + rot + 'deg) scale(' + sc + ')';
+    card.style.opacity = i < 5 ? 1 : 0;
+    card.classList.toggle('is-top', isTop);
+    if(!checked) card.draggable = isTop;
+  });
+  poolCount.textContent = cards.length;
+}
+
+function updateCounters(){
+  renderStack();
+  const placed = bodyOpo.querySelectorAll('.card').length +
+                 bodySafe.querySelectorAll('.card').length;
+  const left   = stack.querySelectorAll('.card').length;
+  if(!checked){
+    statusEl.textContent = 'Размещено: ' + placed + ' из ' + DATA.length +
+      (left ? ' · в колоде: ' + left : '');
+  }
+  toggleHints();
+}
+
+function toggleHints(){
+  [[bodyOpo,'Перетащите сюда объекты ОПО'],
+   [bodySafe,'Перетащите сюда объекты, не относящиеся к ОПО']]
+  .forEach(([body, text]) => {
+    const has = body.querySelector('.card');
+    let hint = body.querySelector('.hint-empty');
+    if(!has && !hint){
+      hint = document.createElement('div');
+      hint.className = 'hint-empty';
+      hint.textContent = text;
+      body.appendChild(hint);
+    } else if(has && hint){
+      hint.remove();
+    }
+  });
+}
+
+/* ====================== DRAG-AND-DROP + TAP ====================== */
+[stack, zoneOpoEl, zoneSafeEl].forEach(target => {
+  target.addEventListener('dragover', e => {
+    if(checked) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    if(target !== stack) target.classList.add('over');
+  });
+  target.addEventListener('dragleave', e => {
+    if(target.contains(e.relatedTarget)) return;
+    if(target !== stack) target.classList.remove('over');
+  });
+  target.addEventListener('drop', e => {
+    e.preventDefault();
+    if(target !== stack) target.classList.remove('over');
+    if(checked) return;
+    const id = e.dataTransfer.getData('text/plain');
+    const card = document.querySelector('.card[data-id="' + id + '"]');
+    if(!card) return;
+    if(target === stack){
+      stack.prepend(card);
+    } else {
+      target.querySelector('.zone-body').appendChild(card);
+    }
+    card.classList.remove('selected');
+    updateCounters();
+  });
+
+  target.addEventListener('click', () => {
+    if(checked) return;
+    const sel = document.querySelector('.card.selected');
+    if(!sel) return;
+    if(target === stack){
+      stack.prepend(sel);
+    } else {
+      target.querySelector('.zone-body').appendChild(sel);
+    }
+    sel.classList.remove('selected');
+    updateCounters();
+  });
+});
+
+/* ====================== ПРОВЕРКА ====================== */
+function check(){
+  checked = true;
+  let correct = 0;
+
+  DATA.forEach(item => {
+    const card = document.querySelector('.card[data-id="' + item.id + '"]');
+    if(!card) return;
+    const zoneEl = card.closest('.zone');
+    const placed = zoneEl ? zoneEl.dataset.zone : null;
+    const isCorrect = placed === item.zone;
+    if(isCorrect) correct++;
+
+    card.classList.remove('correct','wrong','selected');
+    card.classList.add(isCorrect ? 'correct' : 'wrong');
+    card.classList.add('flip-able');
+    card.draggable = false;
+
+    const back = card.querySelector('.flip-back');
+    const correctLabel = item.zone === 'opo' ? 'ОПО' : 'Не ОПО';
+    let prefix;
+    if(placed === null){
+      prefix = '⚠️ Не распределено. Правильно: ' + correctLabel + '. ';
+    } else if(isCorrect){
+      prefix = '✅ Верно. ';
+    } else {
+      prefix = '❌ Ошибка. Правильно: ' + correctLabel + '. ';
+    }
+    back.textContent = prefix + item.why;
+
+    const mark = document.createElement('span');
+    mark.className = 'mark';
+    mark.textContent = isCorrect ? '✓' : '✕';
+    card.appendChild(mark);
+  });
+
+  updateCounters();
+  statusEl.textContent = 'Верно: ' + correct + ' из ' + DATA.length +
+    '. Нажмите на карточку, чтобы прочитать аргумент.';
+  checkBtn.textContent = 'Показать ошибки';
+}
+
+/* ====================== СБРОС ====================== */
+function reset(){
+  checked = false;
+  stack.innerHTML = '';
+  bodyOpo.innerHTML = '';
+  bodySafe.innerHTML = '';
+  checkBtn.textContent = 'Проверить';
+
+  shuffle(DATA).forEach(item => {
+    stack.appendChild(makeCard(item));
+  });
+  updateCounters();
+}
+
+/* ====================== СОБЫТИЯ ====================== */
+checkBtn.addEventListener('click', () => {
+  if(checked){
+    document.querySelectorAll('.card.flip-able:not(.flipped)')
+      .forEach(c => c.classList.add('flipped'));
+    return;
+  }
+  check();
+});
+
+resetBtn.addEventListener('click', reset);
+
+/* ====================== СТАРТ ====================== */
+reset();
+</script>
+</body>
+</html>
